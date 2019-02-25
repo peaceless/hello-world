@@ -1,5 +1,7 @@
 //Client.cpp impliment a Client link to server
 #include <iostream>
+#include <string>
+
 #include <cstdlib>
 #include <memory.h>
 #include <unistd.h>
@@ -30,30 +32,35 @@ void Client::connecting()
 {
 //initialize sent and receive buffer with 0
     memset(&sent,0,sizeof(sent));
-    memset(&receive,0,sizeof(receive));
-    while (1) {
-        int sock;
-//create a socket,return socket descriptor with success or minus number with failed
-        if ((sock = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP)) < 0) {
-            std::cout << "Creat socket fail!" << std::endl;
-            exit(0);
-        }
-//before connect or listen,use bind() to make socket bind to a port
-//in this example,use temporary port allocate by operation system
-//use socket and provide server's msg,
-//link to server return 0 with success
-        if(connect(sock,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) {
-            std::cout << "Can't connect!" << std::endl;
-            exit(0);
-        }
-        std::cin >> sent;
-        write(sock,sent,sizeof(sent));
-        read(sock,receive,sizeof(receive));
-        std::cout << "message :" << receive << std::endl;
-        memset(&sent,0,sizeof(sent));
-        memset(&receive,0,sizeof(receive));
-        close(sock);
+    int sock;
+    //create a socket,return socket descriptor with success or minus number with failed
+    if ((sock = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP)) < 0) {
+	    std::cout << "Creat socket fail!" << std::endl;
+	    exit(0);
     }
+    //before connect or listen,use bind() to make socket bind to a port
+    //in this example,use temporary port allocate by operation system
+    //use socket and provide server's msg,
+    //link to server return 0 with success
+    if(connect(sock,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) {
+	    std::cout << "Can't connect!" << std::endl;
+	    exit(0);
+    }
+    char data_send[2];
+    char data_get[2];
+    while (1) {
+	bzero(data_send, 2);
+	bzero(data_get, 2);
+
+        std::cin >> data_send;
+	std::cout << "data_send" << data_send << std::endl;
+
+        write(sock, data_send, 2);
+        read(sock, data_get, 2);
+
+        std::cout << "message :" << data_get << std::endl;
+    }
+    close(sock);
 }
 
 int main()
