@@ -25,7 +25,7 @@ Client::Client(std::string server_ip)
     //set server's confirguration
     serv_addr.sin_family = AF_INET; //use IPv4
     serv_addr.sin_addr.s_addr = inet_addr(ip); //set server ip address
-    serv_addr.sin_port = htons(1234); //set server listen port
+    serv_addr.sin_port = htons(8089); //set server listen port
 }
 // implement link between client and server
 void Client::connecting()
