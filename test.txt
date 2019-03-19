@@ -1,2 +1,4 @@
 https://git-scm.com/book/zh/v2
 ヒッチコック
+http://ffmpeg.org/
+https://blog.csdn.net/hfuu1504011020/article/details/82588399
