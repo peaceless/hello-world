@@ -24,3 +24,18 @@ sudo apt-get install typora
 ---
 ### 标题3(### 标题3）
 #### 标题4(#### 标题4)
+use d$ cut to end of line
+use d^ cut to the begining of line
+use y$ and y^ to do the same with d$ and d^
+
+tools ctags
+	samba is a ftp servies
+	taglist
+diff -urNB
+u:合并格式输出差异
+r:递归文件目录
+N:将不存在文件视为空文件
+B:忽略由于空行引起的差异
+diff -urNB > xx.patch
+patch
+sort
