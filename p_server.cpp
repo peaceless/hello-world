@@ -7,9 +7,16 @@
 #include <errno.h>
 #include <stdio.h>
 #include <iostream>
+#include <thread>
 //OPEN_MAX was in limits.h to get file's maximum quantity could be opened
 //once,but now it is in sys/source.h,e.g it replaced by RLIMIT_NOFILE
 #define OPEN_MAX 1024
+void test(int sock)
+{
+    char buff[10] = "";
+    sleep(15);
+    read(sock,buff,10);
+}
 int main(int argc,char **argv)
 {
     int i,maxi,listenfd,connfd,sockfd;
@@ -35,16 +42,21 @@ int main(int argc,char **argv)
     client[0].events = POLLRDNORM;//normal data in
     for (i = 1;i < OPEN_MAX;i ++) {client[i].fd = -1;}
     maxi = 0;
+bool x = true;
 
     for (;;) {
         //int poll(struct pollfd fds[],nfds_t nfds,int timeout);
         //diffierence between poll() and select() is that after
         //you call poll,it won't reset the set you pass in it,but
         //select will.
+        std::cout << "readylisten\n";
         nReady = poll(client,maxi+1,-1);//wait for events
+        std::cout << "ready counts: " << nReady;
+        //std::cin.get();
         //bitand with POLLRDNORM to get eveten type
         if (client[0].revents & POLLRDNORM) {
             cli_len = sizeof(cli_addr);
+            std::cout << "hello";
             connfd = accept(listenfd,(struct sockaddr *)&cli_addr,&cli_len);
             std::cout << "new client" << std::endl;
             for (i = 1;i < OPEN_MAX;i++) {
@@ -60,25 +72,38 @@ int main(int argc,char **argv)
             client[i].events = POLLRDNORM;
 
             if (i > maxi) {maxi = i;}
+            std::cout << "lisc: " << maxi;
             if (--nReady <= 0) {continue;}
         }
-        //check all the fd registed
-        for (i = 1;i <= maxi;i++) {
-            if ((sockfd = client[i].fd) < 0) {continue;}
-            if (client[i].revents & (POLLRDNORM | POLLERR)) {
-                if ((n = read(sockfd,buff,2)) < 0) {
-                    if (errno == ECONNRESET) {
-                        std::cout << "client[" << i <<"] aborted connection\n";
-                        close(sockfd);
-                        client[i].fd = -1;
-                    } else {exit(1);}
-                } else if (n == 0) {
-                    std::cout << "client[" << i <<"]closed connection\n";
-                    close(sockfd);
-                    client[i].fd = -1;
-                } else {write(sockfd,buff,n);}
-                if (--nReady <= 0) {break;}
+        std::cout << "mmm";
+                if (x)
+        for (i = 1; i <= maxi; i++) {
+            x = false;
+            if ((sockfd = client[i].fd) < 0)
+                continue;
+            if (client[i].revents & POLLRDNORM) {//events happen
+                std::cout << sockfd;
+                std::thread t(test,sockfd);
+                t.detach();
             }
         }
+        //check all the fd registed
+//        for (i = 1;i <= maxi;i++) {
+//            if ((sockfd = client[i].fd) < 0) {continue;}
+//            if (client[i].revents & (POLLRDNORM | POLLERR)) {
+//                if ((n = read(sockfd,buff,2)) < 0) {
+//                    if (errno == ECONNRESET) {
+//                        std::cout << "client[" << i <<"] aborted connection\n";
+//                        close(sockfd);
+//                        client[i].fd = -1;
+//                    } else {exit(1);}
+//                } else if (n == 0) {
+//                    std::cout << "client[" << i <<"]closed connection\n";
+//                    close(sockfd);
+//                    client[i].fd = -1;
+//                } else {write(sockfd,buff,n);}
+//                if (--nReady <= 0) {break;}
+//            }
+//        }
     }
 }
