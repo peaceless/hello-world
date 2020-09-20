@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
                 if (connfd < 0)
                 {
                     perror("connfd < 0");
-                    return ;
+                    return -1;
                 }
                 ev.data.fd = connfd;
                 ev.events = EPOLLIN | EPOLLET;

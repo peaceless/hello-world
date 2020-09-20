@@ -1,68 +1,100 @@
-#include <iostream>
-
-// in Linux
-#include <netinet/in.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 
+#include <fcntl.h>
+
 #include <cstring>
-#include <thread>
+#include "model.h"
 
-#define LISTENQ 10
-// Warning:this worked under ipv4 and TCP
-class Network {
-public:
-    Network();
-    ~Network();
-
-    bool InitServer(std::string& addr, int port_number);
-    void ServerRun();
-    bool DealNewConn(int fd, sockaddr_in* client);
-
-private:
-    int fd;
-    // TODO: question is, does sockaddr_in still need after bind()?
-    sockaddr_in server;
-};
-
-bool Network::InitServer(std::string& addr, int port_number)
+Network::Socket::Socket()
+    : m_fd(-1)
 {
-    fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = inet_addr(addr.c_str());
-    server.sin_port = htons(port_number);
-
-    int ret;
-    ret = bind(fd, reinterpret_cast<sockaddr*>(&server), sizeof(server));
-    if (ret == -1)
-    {
-        std::cout << "Bind failed." << std::endl;
-        return false;
-    }
-    ret = listen(fd, LISTENQ);
-    if (ret == -1)
-    {
-        std::cout << "Listen failed." << std::endl;
-        return false;
-    }
+}
+Network::Socket::Socket(int fd)
+    : m_fd(fd)
+{
+}
+bool Network::Socket::CreateSock()
+{
+    RequireAssert(m_fd <= -1, false, TRACE("There is a socket already."));
+    m_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    RequireAssert(m_fd != -1, false, TRACE("Socket create failed."));
     return true;
 }
 
-void Network::ServerRun()
+Network::Socket::~Socket()
+{
+    RequireAssert(m_fd != -1, , TRACE("Socket is empty."));
+    // Close();
+}
+
+// TODO: what if I closed a socked with already closed?
+bool Network::Socket::Close()
+{
+    RequireAssert(m_fd != -1, false, TRACE("Error: Socket num is -1."));
+    close(m_fd);
+    return true;
+}
+
+Network::Buf Network::Socket::Read(int n)
+{
+    int size = n > BUFFERSIZE ? BUFFERSIZE : n;
+    TRACE("Info : going to read");
+    TRACE(size);
+    TRACE(" bytes.");
+    return {m_read_buf, read(m_fd, m_read_buf, size)};
+}
+
+ssize_t Network::Socket::Write(Buf &write_buf)
+{
+    RequireAssert(write_buf.len > 0, -1, TRACE("Error: try to read negitive length."));
+    return write(m_fd, write_buf.buf, write_buf.len);
+}
+
+Network::Server::Server()
+{
+    CreateSock();
+}
+
+Network::Server::~Server()
+{}
+
+bool Network::Server::InitServer(std::string &addr, std::string &port_number)
+{
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr(addr.c_str());
+    server.sin_port = htons(std::stoi(port_number.c_str()));
+
+    int ret;
+    ret = bind(m_fd, reinterpret_cast<sockaddr *>(&server), sizeof(server));
+    RequireAssert(ret != -1, false, TRACE("Bind failed."));
+    ret = listen(m_fd, LISTENQ);
+    RequireAssert(ret != -1, false, TRACE("Listen failed."));
+    return true;
+}
+
+void Network::Server::RunAccept()
 {
     sockaddr_in client;
     socklen_t client_len = sizeof(client);
-    while(true)
-    {
-        bzero(&client, sizeof(client));
-        int new_conn = accept(fd, reinterpret_cast<sockaddr*>(&client), &client_len);
-        if (!DealNewConn(new_conn, &client))
-        {
-            std::cout << "error happened when deal new conn." << std::endl;
-            break;
-        }
-    }
+    bzero(&client, sizeof(client));
+    int new_conn = accept(m_fd, reinterpret_cast<sockaddr *>(&client), &client_len);
+    Socket new_sock(new_conn);
+    new_sock.SetNonBlock();
+    bool ret = DealNewConn(new_sock, client);
+    RequireAssert(ret, , TRACE("Error: Deal new conn error."));
 }
 
-bool Network::DealNewConn(int fd, sockaddr_in* client)
-{}
+inline bool Network::Socket::SetNonBlock()
+{
+    RequireAssert(m_fd > -1, false, TRACE("Error: Socket num is " << m_fd));
+    int opts;
+    opts = fcntl(m_fd, F_GETFL);
+    RequireAssert(opts >= 0, false, TRACE("Error: Get socket flag failed."));
+
+    opts = opts | O_NONBLOCK;
+    opts = fcntl(m_fd, F_SETFL, opts);
+    RequireAssert(opts >= 0, false, TRACE("Error: Set socket flag failed."));
+
+    return true;
+}
