@@ -12,17 +12,17 @@ Select::~Select()
 {
 }
 
-bool Select::DealNewConn(Socket fd, sockaddr_in &client)
+bool Select::DealNewConn(Socket sock, sockaddr_in &client)
 {
-    RequireAssert(fd.m_fd < FD_SETSIZE, false, std::cout << "Can't afford more conn." << std::endl);
+    RequireAssert(sock.fd < FD_SETSIZE, false, std::cout << "Can't afford more conn." << std::endl);
 
-    int sock_fd = fd.m_fd;
-    std::cout << "new conn is " << fd.m_fd << std::endl;
-    for (int i = 0; i < FD_SETSIZE && clients[i].m_fd < 0; i++)
+    int sock_fd = sock.fd;
+    std::cout << "new conn is " << sock.fd << std::endl;
+    for (int i = 0; i < FD_SETSIZE && clients[i].fd < 0; i++)
     {
-        if (clients[i].m_fd < 0)
+        if (clients[i].fd < 0)
         {
-            clients[i] = fd;
+            clients[i] = sock;
             break;
         }
     }
@@ -39,30 +39,25 @@ bool Select::DealNewConn(Socket fd, sockaddr_in &client)
     return true;
 }
 
+// TODO: add a method for put server fd into queue
 // TODO: implement it
-bool Select::DealErrorConn(Socket fd, int pos)
+bool Select::DealErrorConn(Socket sock, int pos)
 {
-    FD_CLR(fd.m_fd, &allset);
+    FD_CLR(sock.fd, &allset);
     if (pos != -1)
     {
-        clients[pos].m_fd = -1;
+        clients[pos].fd = -1;
     }
     return true;
 }
 
 bool Select::Handle(int i)
 {
-    Socket sock(clients[i].m_fd);
-    // char data[10] = "hello";
-    // buffer.buf = data;
-    // buffer.len = 5;
-    // std::cout << "goint to send." << std::endl;
-    // sock.Write(buffer);
-    // return true;
+    Socket sock(clients[i].fd);
     Network::Buf ret = sock.Read(10);
     if (ret.len > 0)
     {
-        std::cout << "Socket " << sock.m_fd << " has reach msg:\n"
+        std::cout << "Socket " << sock.fd << " has reach msg:\n"
                   << ret.buf << std::endl;
         int n = Write(ret);
         if (n <= 0)
@@ -99,16 +94,10 @@ void Select::Loop()
             return;
         }
 
-        if (FD_ISSET(m_fd, &rest))
-        {
-            RunAccept();
-            n_ready --;
-        }
-
         int sockfd;
         for (int i = 0; i <= index && n_ready > 0; i++)
         {
-            if ((sockfd = clients[i].m_fd) < 0 | !FD_ISSET(sockfd, &rest))
+            if ((sockfd = clients[i].fd) < 0 | !FD_ISSET(sockfd, &rest))
             {
                 continue;
             }

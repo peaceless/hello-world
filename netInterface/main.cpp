@@ -1,5 +1,6 @@
 #include "Select.h"
 #include <thread>
+#include <cstring>
 
 int main()
 {
@@ -20,7 +21,7 @@ int main()
     Network::Buf buf;
     char data[10] = "hello";
     buf.buf = data;
-    buf.len = 1;
+    buf.len = std::strlen(data);
     client.Write(buf);
     std::thread server_thread(&Select::Loop, &se);
     std::thread client_thread(&Network::Client::Read, &client, 7);

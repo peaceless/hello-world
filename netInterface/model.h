@@ -41,7 +41,7 @@ namespace Network
         virtual ssize_t Write(Buf& write_buf);
 
     public:
-        int m_fd;
+        int fd;
         bool is_nonblock;
     
     private:
